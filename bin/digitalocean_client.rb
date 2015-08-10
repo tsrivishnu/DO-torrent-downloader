@@ -1,6 +1,8 @@
 #!/usr/bin/env ruby
 
-require 'Digitalocean'
+$: << File.join(File.dirname(__FILE__), '../lib')
+
+require 'DigitaloceanClient'
 require 'optparse'
 
 # TODO: Get these values from a env
@@ -54,3 +56,7 @@ if region.nil?
   puts opts
   exit
 end
+
+
+DigitaloceanClient.new(options)
+
