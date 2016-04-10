@@ -1,4 +1,4 @@
-# digitalocean-torrent-downloader-client
+# digitalocean-torrent-downloader
 Client ruby gem(may be not a gem yet!) for accessing digitalocean droplets to download torrents on them and rsync them to you local hardrive.
 
 Run as follows
@@ -9,4 +9,4 @@ Run as follows
 
 The implementation assumes qbit-torrent is installed on the digital ocean image that you build your droplet from.
 
-Will add more details soon. Feel free to write to me if any questions.
+Will add more details soon. Feel free to write to me if you have any questions.
