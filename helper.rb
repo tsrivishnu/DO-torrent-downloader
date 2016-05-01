@@ -20,8 +20,8 @@ require 'open3'
 
 # TODO: Get these values from a env
 access_token    = "" # TODO: SET THIS VALUE
-keys = [''] # TODO: SET THIS VALUE
-USER = 'root'
+keys = [''] # TODO: SET THIS VALUE. Path to the SSH public-private key pair
+USER = 'root' # User on digitalocean droplet.
 
 options = { :size => "512MB" }
 
@@ -170,7 +170,9 @@ begin
 
   #TODO: Handle any exceptions that could be raised by Rsync block.
   #TODO: This block doesn't check if the rsync was successful. Implement
-  # to check and restart rsync if it crashes.
+  #       to check and restart rsync if it crashes.
+  #TODO: This doesn't show proper logging! The progress bar doesn't get updated
+  #       like it normally does. Find an alternative!
   Open3.popen3("rsync -a --partial --progress --rsh=ssh #{USER}@#{host}:/root/Downloads ~/Desktop/") do |stdout, stderr, status, thread|
     while line=stderr.gets do
       puts(line)
