@@ -13,10 +13,14 @@ Client ruby gem(may be not a gem yet!) for accessing digitalocean droplets to do
     ````
 
 
-Run it with
+## Run
 
 ```console
 ./helper.rb -i "your-snapshot-name" -s 512mb -r sgp1 -k "your_ssh_key_name_in_your_digital_ocean_account" -m 'your_torrents_magnetic_link'
 ```
+
+## Options
+
+-- Will add em soon. However, run `./helper.rb --help` to see the options.
 
 Will add more details soon. Feel free to write to me if you have any questions.
