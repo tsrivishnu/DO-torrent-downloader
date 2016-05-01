@@ -7,6 +7,8 @@ Ruby gem(may be not a gem yet!) to fire up digitalocean droplets dynamically and
 
 ## Setup
 
+* Install Ruby if you don't have it installed already
+* Install `droplet_kit` gem with `gem install droplet_kit`
 * Follow instructions [here](https://www.digitalocean.com/community/tutorials/how-to-use-the-digitalocean-api-v2) and get an access token. Assign it to the variable `access_token` in the script. 
 * Add the path of the ssh key pair on your host machine to the array `keys` in the script. Example
    
