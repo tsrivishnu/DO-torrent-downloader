@@ -3,9 +3,9 @@
 # and runs the qbitclient on the droplet to download the magnet url provided in the
 # arguments and rsync the downloaded files to local filesystem.
 
-# This programs needs you to have an image in your digitalocean that has
-# `qbittorrent` installed on it. Also, needs you to have the ssh key of the script's
-# host machine to be added in the digitalocean account.
+# This programs assumes that you have an image under your digitalocean account that has
+# `qbittorrent` installed on it. Also, assumes that you have the ssh key of the
+# host machine that runs this script added to your digitalocean account.
 #
 # Author: Sri Vishnu Totakura
 # Date: 23 January, 2016
