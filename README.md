@@ -5,7 +5,7 @@ Ruby gem(may be not a gem yet!) to fire up digitalocean droplets dynamically and
 
 <b>Note</b>: The script assumes  that you have an image under your digitalocean account that has `qbittorrent` installed on it. Also, it assumes that the ssh key of the machine is added under your digitalocean account(It creates the droplet with it).
 
-## Setup
+## Usage
 
 * Install Ruby if you don't have it installed already
 * Install `droplet_kit` gem with `gem install droplet_kit`
