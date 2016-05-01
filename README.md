@@ -1,5 +1,7 @@
 # digitalocean-torrent-downloader
-Client ruby gem(may be not a gem yet!) for accessing digitalocean droplets to download torrents on them and rsync them to you local hardrive.
+Ruby gem(may be not a gem yet!) to fire up digitalocean droplets dynamically and download torrents via them to you local hardrive.
+
+<b>Note: Downloading copyrighted content is illegal! </b>
 
 <b>Note</b>: The script assumes  that you have an image under your digitalocean account that has `qbittorrent` installed on it. Also, it assumes that the ssh key of the machine is added under your digitalocean account(It creates the droplet with it).
 
