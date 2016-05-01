@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+
 # Script that would fireup a digital ocean droplet with an image that is specified
 # and runs the qbitclient on the droplet to download the magnet url provided in the
 # arguments and rsync the downloaded files to local filesystem.
@@ -9,7 +10,6 @@
 #
 # Author: Sri Vishnu Totakura
 # Date: 23 January, 2016
-
 
 
 require 'droplet_kit'
