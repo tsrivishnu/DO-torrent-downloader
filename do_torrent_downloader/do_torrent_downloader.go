@@ -48,7 +48,8 @@ func RealMain() {
 	fmt.Println("Running with the following config:")
 	fmt.Println(config)
 	fmt.Println("")
-	return
+
+	InitDoClient(config.DigitalOceanPat)
 
 	if dropletIp == "" { // No droplet ID passed.
 		fmt.Println("Create a new droplet")
