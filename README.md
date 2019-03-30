@@ -1,30 +1,37 @@
-# digitalocean-torrent-downloader
-Ruby gem(may be not a gem yet!) to fire up digitalocean droplets dynamically and download torrents via them to you local hardrive.
+# DigitalOcean torrent downloader
 
-<b>Note: Downloading copyrighted content is illegal! </b>
+Program to download torrents using `qbittorrent` on a droplet on Digitalocean and Rsync the files via SSH to the local disk.
 
-<b>Note</b>: The script assumes  that you have an image under your digitalocean account that has `qbittorrent` installed on it. Also, it assumes that the ssh key of the machine is added under your digitalocean account(It creates the droplet with it).
+>> Note: I built this program to download legal torrents to a machine that is behind a firewall preventing torrent traffic. This program can howwever download any torrent but the user needs to be careful and know whether they are legally allowed to download the particual torrents they are downlaoding.
 
-## Usage
+### Pre-requisites
 
-* Install Ruby if you don't have it installed already
-* Install `droplet_kit` gem with `gem install droplet_kit`
-* Follow instructions [here](https://www.digitalocean.com/community/tutorials/how-to-use-the-digitalocean-api-v2) and get an access token. Assign it to the variable `access_token` in the script. 
-* Add the path of the ssh key pair on your host machine to the array `keys` in the script. Example
-   
-     ````ruby
-      keys = ['/Users/badAssCowBoy/.ssh/id_rsa']
-    ````
+* Custom image on DigitalOcean with [`qbittorrent-nox`](https://github.com/qbittorrent/qBittorrent) installed.
+* SSH access to the droplet usign a key file that is not password protected. (Will support password protected files soon in later versions.)
+* `rsync` program installed on the host machine.
 
+### Installation
 
-## Run
+* Make the config file `do-torrent-downloader.yml` from the example file and update the configuration to match yours.
+```bash
+$ cp do-torrent-downloader.yml.example do-torrent-downloader.yml
+```
+### Usage
 
-```console
-./helper.rb -i "your-snapshot-name" -s 512mb -r sgp1 -k "your_ssh_key_name_in_your_digital_ocean_account" -m 'your_torrents_magnetic_link'
+#### To download using magnet links
+```bash
+$ ./do-torrent-downloader -m "<your-torrent-1-magnet-link" -m "<your-torrent-2-magnet-link"
+```
+ This above will start a new droplet from the image that is specified in the configuration file, starts the torrent client, waits till the downloads are completed, stops the torrent client and rsyncs the files to the local machine.
+
+#### Resume a failed copy to local
+
+If in case the program failed or the copy didn't finish. If your droplet is still running, you can resume the whole process by passing the droplet's public IP to the script.
+
+```bash
+$ ./do-torrent-downloader -ip xxx.xxx.xxx.xxx
 ```
 
-## Options
+#### Add a torrent to already running instance.
 
--- Will add em soon. However, run `./helper.rb --help` to see the options.
-
-Will add more details soon. Feel free to write to me if you have any questions.
+Not supported yet. Soon will add support for this as well.
