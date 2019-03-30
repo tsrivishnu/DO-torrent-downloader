@@ -6,6 +6,5 @@ services:
       - GOPATH=/app
     volumes:
       - ".:/app"
-      - "$HOME/pagekite-setup:/pg"
     working_dir: "/app"
     tty: true
