@@ -1,4 +1,10 @@
-src/
+src/*
+!src/github.com/
+src/github.com/*
+!src/github.com/tsrivishnu/
+src/github.com/tsrivishnu/*
+!src/github.com/tsrivishnu/do_torrent_downloader
+
 bin/
 pkg/
 do-torrent-downloader.yml
