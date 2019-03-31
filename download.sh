@@ -25,7 +25,7 @@ else
 fi
 
 # Download binary
-curl -L -o do_torrent_downloader "https://github.com/tsrivishnu/DO-torrent-downloader/releases/download/v${VERSION}/crane_${PLATFORM}_${ARCH}"
+curl -L -o do_torrent_downloader "https://github.com/tsrivishnu/DO-torrent-downloader/releases/download/v${VERSION}/do_torrent_downloader_${PLATFORM}_${ARCH}"
 
 # Make binary executable
 chmod +x do_torrent_downloader
