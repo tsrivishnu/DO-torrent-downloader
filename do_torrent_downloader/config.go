@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	"os"
+	"os/user"
 	"path/filepath"
 )
 
@@ -22,8 +24,30 @@ type config struct {
 	}
 }
 
-func LoadConfiguration(file string) *config {
+func LoadConfiguration(filename string) *config {
+	file := findConfigFile(filename)
 	return readFile(file)
+}
+
+func findConfigFile(filename string) string {
+	var dirs []string
+
+	// Look in current working directory for the file.
+	wDir, _ := os.Getwd()
+	// Check user's home directory
+	usr, _ := user.Current()
+
+	dirs = append(dirs, wDir, usr.HomeDir)
+
+	for _, dir := range dirs {
+		filePath := filepath.Join(dir, filename)
+		if _, err := os.Stat(filePath); err == nil {
+			fmt.Printf("Using the configuration: %v\n", filePath)
+			return filePath
+		}
+	}
+
+	panic("Didn't find the config file.")
 }
 
 // readFile will read the config file
