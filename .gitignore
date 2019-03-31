@@ -1,4 +1,5 @@
 src/*
+# Don't ignore the symlink inside src directory
 !src/github.com/
 src/github.com/*
 !src/github.com/tsrivishnu/
