@@ -13,9 +13,25 @@ Program to download torrents using `qbittorrent` on a droplet on Digitalocean an
 ### Installation
 
 * Make the config file `do-torrent-downloader.yml` from the example file and update the configuration to match yours.
-```bash
-$ cp do-torrent-downloader.yml.example do-torrent-downloader.yml
-```
+  ```bash
+  $ cp do-torrent-downloader.example.yml $HOME/do-torrent-downloader.yml
+  ```
+  > The script looks for the configuration file in the current working directory or the user's home directory. You can place the file in any of the locations.
+
+### Build from source code.
+
+* Clone this repository.
+* Get the dependencies
+  ```console
+  $ cd do_torrent_downloader
+  $ go get ./...
+  ```
+* Build
+  ```console
+  # From within the root of the project.
+  $ go build main.go do_torrent_downloader
+  ```
+
 ### Usage
 
 #### To download using magnet links

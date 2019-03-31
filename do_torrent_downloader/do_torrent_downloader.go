@@ -45,7 +45,7 @@ func RealMain() {
 
 	config := LoadConfiguration("do-torrent-downloader.yml")
 
-	fmt.Println("Running with the following config:")
+	fmt.Println("\nRunning with the following config:")
 	fmt.Println(config)
 	fmt.Println("")
 
@@ -95,7 +95,7 @@ func RealMain() {
 			sshClient.executeCmd("pkill qbit")
 			downloadsInProgress = false
 		} else {
-			fmt.Println("Following downloads in progress...")
+			fmt.Println("Following downloads are in progress...")
 			fmt.Println(incoming)
 		}
 		time.Sleep(5 * time.Second)
