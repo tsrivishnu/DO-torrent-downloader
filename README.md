@@ -12,9 +12,14 @@ Program to download torrents using `qbittorrent` on a droplet on Digitalocean an
 
 ### Installation
 
-* Make the config file `do-torrent-downloader.yml` from the example file and update the configuration to match yours.
+* Download the latest release (1.0.0)
+  ```
+  bash -c "`curl -sL https://raw.githubusercontent.com/tsrivishnu/DO-torrent-downloader/v1.0.0/download.sh`"
+  ```
+* Make the `do-torrent-downloader.yml` from the example file and update the configuration to match yours.
   ```bash
-  $ cp do-torrent-downloader.example.yml $HOME/do-torrent-downloader.yml
+  curl -L -o do-torrent-downloader.yml "https://raw.githubusercontent.com/tsrivishnu/DO-torrent-downloader/v1.0.0/do-torrent-downloader.example.yml" && \
+  cp do-torrent-downloader.yml $HOME/do-torrent-downloader.yml
   ```
   > The script looks for the configuration file in the current working directory or the user's home directory. You can place the file in any of the locations.
 
