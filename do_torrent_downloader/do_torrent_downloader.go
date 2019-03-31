@@ -24,11 +24,13 @@ func (i *arrayFlags) Set(value string) error {
 
 var magnetLinks arrayFlags
 var dropletIp string
+var showVersion bool
 var droplet *godo.Droplet
 
 func setAndParseFlags() {
 	flag.Var(&magnetLinks, "m", "Torrent magnet link.")
 	flag.StringVar(&dropletIp, "ip", "", "Public IP of an already running droplet.")
+	flag.BoolVar(&showVersion, "v", false, "prints current version")
 	flag.Parse()
 }
 
@@ -42,6 +44,10 @@ func optionsForQbit() string {
 
 func RealMain() {
 	setAndParseFlags()
+	if showVersion {
+		PrintVersion()
+		return
+	}
 
 	config := LoadConfiguration("do-torrent-downloader.yml")
 
