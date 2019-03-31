@@ -8,3 +8,6 @@ build-darwin:
 
 build-windows:
 	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -o do_torrent_downloader_windows_amd64.exe main.go
+
+# build-raspberrypi:
+# 	GOOS=linux GOARCH=arm GOARM=5 CGO_ENABLED=0 go build -o do_torrent_downloader_linux_armv7l.exe main.go
