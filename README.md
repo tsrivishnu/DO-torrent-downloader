@@ -51,3 +51,8 @@ $ ./do-torrent-downloader -ip xxx.xxx.xxx.xxx
 #### Add a torrent to already running instance.
 
 Not supported yet. Soon will add support for this as well.
+
+# Ruby version (discontinued)
+
+Looking for the discontinued ruby version of this project?
+Its moved to the [ruby branch](https://github.com/tsrivishnu/DO-torrent-downloader/tree/ruby) in the git repository.
