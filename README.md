@@ -2,10 +2,11 @@
 
 Program to download torrents using `qbittorrent` on a droplet on Digitalocean and Rsync the files via SSH to the local disk.
 
->> Note: I built this program to download legal torrents to a machine that is behind a firewall preventing torrent traffic. This program can howwever download any torrent but the user needs to be careful and know whether they are legally allowed to download the particual torrents they are downlaoding.
+> Note: I built this program to download legal torrents to a machine that is behind a firewall preventing torrent traffic. This program can howwever download any torrent but the user needs to be careful and know whether they are legally allowed to download the torrents they are downloading.
 
 ### Pre-requisites
 
+* DigitalOcean's Personal Access Token for API access. You can manage there [here](https://cloud.digitalocean.com/settings/applications)
 * Custom image on DigitalOcean with [`qbittorrent-nox`](https://github.com/qbittorrent/qBittorrent) installed.
 * SSH access to the droplet usign a key file that is not password protected. (Will support password protected files soon in later versions.)
 * `rsync` program installed on the host machine.
