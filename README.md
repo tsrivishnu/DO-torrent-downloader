@@ -4,7 +4,7 @@ Program to download torrents using `qbittorrent` on a droplet on Digitalocean an
 
 > Note: I built this program to download legal torrents to a machine that is behind a firewall preventing torrent traffic. This program can howwever download any torrent but the user needs to be careful and know whether they are legally allowed to download the torrents they are downloading.
 
-### Pre-requisites
+### Prerequisites
 
 * DigitalOcean's Personal Access Token for API access. You can manage there [here](https://cloud.digitalocean.com/settings/applications)
 * Custom image on DigitalOcean with [`qbittorrent-nox`](https://github.com/qbittorrent/qBittorrent) installed.
