@@ -2,6 +2,7 @@ build: build-linux build-darwin build-windows
 
 build-linux:
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o do_torrent_downloader_linux_amd64 main.go
+	GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build -o do_torrent_downloader_linux_armv7 main.go
 
 build-darwin:
 	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o do_torrent_downloader_darwin_amd64 main.go

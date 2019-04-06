@@ -18,6 +18,9 @@ fi
 if [[ ($UNAME == *x86_64*) || ($UNAME == *amd64*) ]]
 then
   ARCH="amd64"
+elif [[ ($UNAME == *armv7*)  ]]
+then
+  ARCH="armv7"
 else
   echo "Currently, there are no 32bit binaries provided."
   echo "You will need to build binaries yourself."
