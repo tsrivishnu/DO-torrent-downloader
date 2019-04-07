@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.1.0 (2019-04-07)
+
 * [Enhancement] Pass download dir as an argument to override the value set in config file.
 
 ## 1.0.0 (2019-03-31)
