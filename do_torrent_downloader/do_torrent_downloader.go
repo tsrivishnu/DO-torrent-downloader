@@ -24,12 +24,14 @@ func (i *arrayFlags) Set(value string) error {
 
 var magnetLinks arrayFlags
 var dropletIp string
+var downloadDir string
 var showVersion bool
 var droplet *godo.Droplet
 
 func setAndParseFlags() {
 	flag.Var(&magnetLinks, "m", "Torrent magnet link.")
 	flag.StringVar(&dropletIp, "ip", "", "Public IP of an already running droplet.")
+	flag.StringVar(&downloadDir, "dir", "", "Download to directory (overrides what is set in the config file)")
 	flag.BoolVar(&showVersion, "v", false, "prints current version")
 	flag.Parse()
 }
@@ -50,6 +52,10 @@ func RealMain() {
 	}
 
 	config := LoadConfiguration("do-torrent-downloader.yml")
+	if downloadDir != "" {
+		// Override with argument
+		config.DownloadDir = downloadDir
+	}
 
 	fmt.Println("\nRunning with the following config:")
 	fmt.Println(config)
