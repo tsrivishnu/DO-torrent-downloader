@@ -27,6 +27,9 @@ sed -i.bak 's/Unreleased/Unreleased\
 ## '$version' ('$today')/' CHANGELOG.md
 rm CHANGELOG.md.bak
 
+echo "Update contributors..."
+git contributors | awk '{for (i=2; i<NF; i++) printf $i " "; print $NF}' > CONTRIBUTORS
+
 echo "Build binaries..."
 docker-compose run app make build
 
