@@ -6,7 +6,7 @@ Program to download torrents using `qbittorrent` on a droplet on Digitalocean an
 
 ### Prerequisites
 
-* DigitalOcean's Personal Access Token for API access. You can manage there [here](https://cloud.digitalocean.com/settings/applications)
+* DigitalOcean's Personal Access Token for API access. You can manage them [here](https://cloud.digitalocean.com/settings/applications)
 * Custom image on DigitalOcean with [`qbittorrent-nox`](https://github.com/qbittorrent/qBittorrent) installed.
 * SSH access to the droplet usign a key file that is not password protected. (Will support password protected files soon in later versions.)
 * `rsync` program installed on the host machine.
