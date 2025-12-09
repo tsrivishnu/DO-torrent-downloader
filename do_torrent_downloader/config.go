@@ -21,6 +21,7 @@ type config struct {
 	QbittorrentVersion  string `yaml:"qbittorrent_version"`
 	QbittorrentPassword string `yaml:"qbittorrent_password"`
 	DropletDownloadDir  string `yaml:"droplet_download_dir"`
+	DropletTag          string `yaml:"droplet_tag"`
 	Qbit                struct {
 		IncomingDir  string `yaml:"incoming_dir"`
 		CompletedDir string `yaml:"completed_dir"`

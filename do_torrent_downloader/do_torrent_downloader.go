@@ -27,6 +27,7 @@ var magnetLinks arrayFlags
 var dropletIp string
 var downloadDir string
 var showVersion bool
+var cleanRemote bool
 var droplet *godo.Droplet
 
 func setAndParseFlags() {
@@ -34,6 +35,7 @@ func setAndParseFlags() {
 	flag.StringVar(&dropletIp, "ip", "", "Public IP of an already running droplet.")
 	flag.StringVar(&downloadDir, "dir", "", "Download to directory (overrides what is set in the config file)")
 	flag.BoolVar(&showVersion, "v", false, "prints current version")
+	flag.BoolVar(&cleanRemote, "cleanRemote", false, "Delete all droplets with the configured tag")
 	flag.Parse()
 }
 
@@ -63,6 +65,12 @@ func RealMain() {
 	fmt.Println("")
 
 	InitDoClient(config.DigitalOceanPat)
+
+	if cleanRemote {
+		fmt.Printf("Cleaning up droplets with tag: %s\n", config.DropletTag)
+		DeleteDropletsByTag(config.DropletTag)
+		return
+	}
 
 	if dropletIp == "" { // No droplet ID passed.
 		fmt.Println("Create a new droplet")

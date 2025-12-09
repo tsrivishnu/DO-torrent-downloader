@@ -6,6 +6,8 @@ image_slug: docker-20-04
 region: blr1
 # Name the droplet.
 droplet_name: torrent-downloader
+# Tag to identify droplets created by this tool
+droplet_tag: do-torrent-downloader
 # SSH Key name as shown in digitalocean account
 ssh_key: my.name@domain.com
 # sshKey: srivishnu.totakura@experteer.com
