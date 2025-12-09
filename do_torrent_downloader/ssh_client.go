@@ -57,7 +57,6 @@ func publicKeyFile(file string) ssh.AuthMethod {
 
 func (sshClient sshClient) executeCmd(command string) string {
 	fmt.Println("Will execute command: %s", command)
-	time.Sleep(5 * time.Second)
 
 	conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:%s", sshClient.hostname, sshClient.port), sshClient.config)
 	if err != nil {
@@ -86,24 +85,12 @@ func (sshClient sshClient) SetupQbittorrent(conf *config) {
 
 	// 1. Create the directories on host
 	fmt.Printf("Creating directories: %s, %s\n", conf.Qbit.IncomingDir, conf.Qbit.CompletedDir)
-	sshClient.executeCmd(fmt.Sprintf("mkdir -p %s", conf.Qbit.IncomingDir))
-	sshClient.executeCmd(fmt.Sprintf("mkdir -p %s", conf.Qbit.CompletedDir))
-	sshClient.executeCmd("mkdir -p /root/config/qBittorrent")
+	sshClient.executeCmd(fmt.Sprintf("mkdir -p %s %s /root/config/qBittorrent", conf.Qbit.IncomingDir, conf.Qbit.CompletedDir))
 
 	// 2. Write qBittorrent configuration
 	// We configure it to accept local connections without auth for easy curl access,
 	// and set the Temp/Save paths to map to the host directories we just created.
 	fmt.Println("Configuring qBittorrent...")
-
-	sshClient.executeCmd("echo '[LegalNotice]' > /root/config/qBittorrent/qBittorrent.conf")
-	sshClient.executeCmd("echo 'Accepted=true' >> /root/config/qBittorrent/qBittorrent.conf")
-	sshClient.executeCmd("echo '' >> /root/config/qBittorrent/qBittorrent.conf")
-	sshClient.executeCmd("echo '[BitTorrent]' >> /root/config/qBittorrent/qBittorrent.conf")
-	sshClient.executeCmd(fmt.Sprintf("echo 'Session\\TempPath=/downloads/incoming' >> /root/config/qBittorrent/qBittorrent.conf", conf.Qbit.IncomingDir))
-	sshClient.executeCmd(fmt.Sprintf("echo 'Session\\DefaultSavePath=/downloads/completed' >> /root/config/qBittorrent/qBittorrent.conf", conf.Qbit.CompletedDir))
-	sshClient.executeCmd("echo 'Session\\TempPathEnabled=true' >> /root/config/qBittorrent/qBittorrent.conf")
-	sshClient.executeCmd("echo '[Preferences]' >> /root/config/qBittorrent/qBittorrent.conf")
-	sshClient.executeCmd("echo 'WebUI\\Username=admin' >> /root/config/qBittorrent/qBittorrent.conf")
 
 	// Generate password hash from config
 	pwdHash, err := generateQbittorrentHash(conf.QbittorrentPassword)
@@ -113,9 +100,19 @@ func (sshClient sshClient) SetupQbittorrent(conf *config) {
 		// If we can't generate hash, we can't set the correct password.
 		panic(err)
 	}
-	// Escape quotes for echo
-	// The hash format is @ByteArray(...) which doesn't contain double quotes, but we wrap it in double quotes for the config line.
-	sshClient.executeCmd(fmt.Sprintf("echo 'WebUI\\Password_PBKDF2=\"%s\"' >> /root/config/qBittorrent/qBittorrent.conf", pwdHash))
+
+	configContent := fmt.Sprintf(`[LegalNotice]
+Accepted=true
+
+[BitTorrent]
+Session\TempPath=/downloads/incoming
+Session\DefaultSavePath=/downloads/completed
+Session\TempPathEnabled=true
+[Preferences]
+WebUI\Username=admin
+WebUI\Password_PBKDF2="%s"`, pwdHash)
+
+	sshClient.executeCmd(fmt.Sprintf("cat <<'EOF' > /root/config/qBittorrent/qBittorrent.conf\n%s\nEOF", configContent))
 
 	// 3. Pull the image
 	fmt.Printf("Pulling image: linuxserver/qbittorrent:%s\n", conf.QbittorrentVersion)
@@ -123,8 +120,7 @@ func (sshClient sshClient) SetupQbittorrent(conf *config) {
 
 	// 4. Stop and remove existing container
 	fmt.Println("Stopping and removing existing qbittorrent container...")
-	sshClient.executeCmd("docker stop qbittorrent || true")
-	sshClient.executeCmd("docker rm qbittorrent || true")
+	sshClient.executeCmd("docker stop qbittorrent || true && docker rm qbittorrent || true")
 
 	// 5. Run the container
 	fmt.Println("Starting qbittorrent container...")
