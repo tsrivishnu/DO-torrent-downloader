@@ -43,7 +43,7 @@ func CreateDroplet(config *config) (*godo.Droplet, error) {
 		Region: config.Region,
 		Size:   config.Size,
 		Image: godo.DropletCreateImage{
-			ID: config.ImageId,
+			Slug: config.ImageSlug,
 		},
 		SSHKeys: []godo.DropletCreateSSHKey{
 			{Fingerprint: FindKey(config.SshKey).Fingerprint},

@@ -4,11 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/digitalocean/godo"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/digitalocean/godo"
 )
 
 type arrayFlags []string
@@ -88,29 +89,41 @@ func RealMain() {
 	fmt.Printf("Droplet IPv4 %v \n", ip)
 
 	sshClient := NewSshClient(ip, "22", "root", config.SshPrivateKeyPath)
+
+	sshClient.SetupQbittorrent(config, optionsForQbit())
 	if len(magnetLinks) > 0 {
-		resp := sshClient.executeCmd(fmt.Sprintf("qbittorrent-nox -d %v", optionsForQbit()))
-		fmt.Println(resp)
-		fmt.Printf("Torrents will be downloaded. Follow at: http://admin:adminadmin@%v:8080\n", ip)
+		sshClient.AddTorrents(magnetLinks)
+		fmt.Printf("Torrents added. Monitor at: http://%v:8080\n", ip)
 	} else {
-		fmt.Println("No magnet links provided. Skip starting the torrent client.")
+		fmt.Println("No magnet links provided. Only starting the torrent client.")
 	}
 
 	downloadsInProgress := true
 	for downloadsInProgress == true {
-		incoming := sshClient.executeCmd(fmt.Sprintf("ls %s", config.Qbit.IncomingDir))
-		downloaded := sshClient.executeCmd(fmt.Sprintf("ls %s", config.Qbit.CompletedDir))
+		// qBittorrent configured to move files from incoming to completed.
+		// We check if incoming is empty (all moved) and completed has files.
+		// Note: This logic assumes we started with empty dirs and added torrents.
+		// If torrents are large, they stay in incoming.
+
+		// Check incoming directory content
+		incoming := sshClient.executeCmd(fmt.Sprintf("ls -A %s", config.Qbit.IncomingDir))
+		// Check completed directory content
+		downloaded := sshClient.executeCmd(fmt.Sprintf("ls -A %s", config.Qbit.CompletedDir))
+
+		// Trimming whitespace is important as ls might output newlines
+		incoming = strings.TrimSpace(incoming)
+		downloaded = strings.TrimSpace(downloaded)
 
 		if incoming == "" && downloaded != "" {
-			fmt.Println("Downloads completed")
-			// kill qbit-torrent
-			sshClient.executeCmd("pkill qbit")
+			fmt.Println("Downloads completed (Incoming empty, Completed has files)")
 			downloadsInProgress = false
 		} else {
-			fmt.Println("Following downloads are in progress...")
-			fmt.Println(incoming)
+			fmt.Println("Downloads in progress...")
+			if incoming != "" {
+				fmt.Printf("Incoming: %s\n", incoming)
+			}
+			time.Sleep(5 * time.Second)
 		}
-		time.Sleep(5 * time.Second)
 	}
 
 	// Rsync the files: https://github.com/refola/golang/blob/master/backup/rsync.go
@@ -122,7 +135,7 @@ func RealMain() {
 		"-a",
 		"--partial",
 		"--progress",
-		fmt.Sprintf("%v@%v:%v", "root", ip, config.Qbit.CompletedDir),
+		fmt.Sprintf("%v@%v:%v/", "root", ip, config.Qbit.CompletedDir),
 		config.DownloadDir)
 	// show rsync's output
 	cmd.Stdout = os.Stdout
