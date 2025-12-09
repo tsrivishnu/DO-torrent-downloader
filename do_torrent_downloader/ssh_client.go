@@ -104,7 +104,18 @@ func (sshClient sshClient) SetupQbittorrent(conf *config) {
 	sshClient.executeCmd("echo 'Session\\TempPathEnabled=true' >> /root/config/qBittorrent/qBittorrent.conf")
 	sshClient.executeCmd("echo '[Preferences]' >> /root/config/qBittorrent/qBittorrent.conf")
 	sshClient.executeCmd("echo 'WebUI\\Username=admin' >> /root/config/qBittorrent/qBittorrent.conf")
-	sshClient.executeCmd("echo 'WebUI\\Password_PBKDF2=\"@ByteArray(ARQ77eY1NUZaQsuDHbIMCA==:0WMRkYTUWVT9wVvdDtHAjU9b3b7uB8NR1Gur2hmQCvCDpm39Q+PsJRJPaCU51dEiz+dTzh8qbPsL8WkFljQYFQ==)\"' >> /root/config/qBittorrent/qBittorrent.conf")
+
+	// Generate password hash from config
+	pwdHash, err := generateQbittorrentHash(conf.QbittorrentPassword)
+	if err != nil {
+		fmt.Printf("Error generating password hash: %v. Using default/hardcoded hash might fail login if password changed.\n", err)
+		// Fallback or panic? For now let's just panic or warn.
+		// If we can't generate hash, we can't set the correct password.
+		panic(err)
+	}
+	// Escape quotes for echo
+	// The hash format is @ByteArray(...) which doesn't contain double quotes, but we wrap it in double quotes for the config line.
+	sshClient.executeCmd(fmt.Sprintf("echo 'WebUI\\Password_PBKDF2=\"%s\"' >> /root/config/qBittorrent/qBittorrent.conf", pwdHash))
 
 	// 3. Pull the image
 	fmt.Printf("Pulling image: linuxserver/qbittorrent:%s\n", conf.QbittorrentVersion)
