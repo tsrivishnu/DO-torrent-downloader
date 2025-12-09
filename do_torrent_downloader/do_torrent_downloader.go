@@ -89,6 +89,9 @@ func RealMain() {
 	fmt.Printf("Droplet IPv4 %v \n", ip)
 
 	sshClient := NewSshClient(ip, "22", "root", config.SshPrivateKeyPath)
+	// delete firewall rules preventing SSH access
+	sshClient.executeCmd("sudo ufw delete limit 22/tcp || true")
+	sshClient.executeCmd("sudo ufw allow ssh || true && sudo ufw reload")
 
 	sshClient.SetupQbittorrent(config)
 	if len(magnetLinks) > 0 {
