@@ -90,9 +90,9 @@ func RealMain() {
 
 	sshClient := NewSshClient(ip, "22", "root", config.SshPrivateKeyPath)
 
-	sshClient.SetupQbittorrent(config, optionsForQbit())
+	sshClient.SetupQbittorrent(config)
 	if len(magnetLinks) > 0 {
-		sshClient.AddTorrents(magnetLinks)
+		sshClient.AddTorrents(magnetLinks, config.QbittorrentPassword)
 		fmt.Printf("Torrents added. Monitor at: http://%v:8080\n", ip)
 	} else {
 		fmt.Println("No magnet links provided. Only starting the torrent client.")

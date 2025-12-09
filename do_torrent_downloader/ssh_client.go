@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -18,8 +19,8 @@ type sshClient struct {
 
 type SshClientOp interface {
 	executeCmd(string) string
-	SetupQbittorrent(*config, string)
-	AddTorrents([]string)
+	SetupQbittorrent(*config)
+	AddTorrents([]string, string)
 }
 
 func NewSshClient(hostname string, port string, username string, privateKeyPath string) SshClientOp {
@@ -81,31 +82,27 @@ func (sshClient sshClient) executeCmd(command string) string {
 	return stdoutBuf.String()
 }
 
-func (sshClient sshClient) SetupQbittorrent(conf *config, optionsForQbitExecutable string) {
+func (sshClient sshClient) SetupQbittorrent(conf *config) {
 
 	// 1. Create the directories on host
-	// fmt.Printf("Creating directories: %s, %s\n", conf.Qbit.IncomingDir, conf.Qbit.CompletedDir)
-	// sshClient.executeCmd(fmt.Sprintf("mkdir -p %s", conf.Qbit.IncomingDir))
-	// sshClient.executeCmd(fmt.Sprintf("mkdir -p %s", conf.Qbit.CompletedDir))
-	// sshClient.executeCmd("mkdir -p /root/config/qBittorrent")
+	fmt.Printf("Creating directories: %s, %s\n", conf.Qbit.IncomingDir, conf.Qbit.CompletedDir)
+	sshClient.executeCmd(fmt.Sprintf("mkdir -p %s", conf.Qbit.IncomingDir))
+	sshClient.executeCmd(fmt.Sprintf("mkdir -p %s", conf.Qbit.CompletedDir))
+	sshClient.executeCmd("mkdir -p /root/config/qBittorrent")
 
 	// 2. Write qBittorrent configuration
 	// We configure it to accept local connections without auth for easy curl access,
 	// and set the Temp/Save paths to map to the host directories we just created.
 	fmt.Println("Configuring qBittorrent...")
 
-	// Write config to file (escaping quotes is tricky, using simple echo lines)
 	sshClient.executeCmd("echo '[LegalNotice]' > /root/config/qBittorrent/qBittorrent.conf")
 	sshClient.executeCmd("echo 'Accepted=true' >> /root/config/qBittorrent/qBittorrent.conf")
-	// sshClient.executeCmd("echo '' >> /root/config/qBittorrent/qBittorrent.conf")
-	sshClient.executeCmd("echo '[Session]' >> /root/config/qBittorrent/qBittorrent.conf")
-	sshClient.executeCmd("echo 'TempPath=/downloads/incoming' >> /root/config/qBittorrent/qBittorrent.conf")
-	sshClient.executeCmd("echo 'SavePath=/downloads/completed' >> /root/config/qBittorrent/qBittorrent.conf")
+	sshClient.executeCmd("echo '' >> /root/config/qBittorrent/qBittorrent.conf")
+	sshClient.executeCmd("echo '[BitTorrent]' >> /root/config/qBittorrent/qBittorrent.conf")
+	sshClient.executeCmd(fmt.Sprintf("echo 'Session\\TempPath=/downloads/incoming' >> /root/config/qBittorrent/qBittorrent.conf", conf.Qbit.IncomingDir))
+	sshClient.executeCmd(fmt.Sprintf("echo 'Session\\DefaultSavePath=/downloads/completed' >> /root/config/qBittorrent/qBittorrent.conf", conf.Qbit.CompletedDir))
+	sshClient.executeCmd("echo 'Session\\TempPathEnabled=true' >> /root/config/qBittorrent/qBittorrent.conf")
 	sshClient.executeCmd("echo '[Preferences]' >> /root/config/qBittorrent/qBittorrent.conf")
-	sshClient.executeCmd("echo 'WebUI\\AuthSubnetWhitelist=127.0.0.1/32' >> /root/config/qBittorrent/qBittorrent.conf")
-	sshClient.executeCmd("echo 'WebUI\\AuthSubnetWhitelistEnabled=true' >> /root/config/qBittorrent/qBittorrent.conf")
-	sshClient.executeCmd("echo 'WebUI\\LocalHostAuth=false' >> /root/config/qBittorrent/qBittorrent.conf")
-	sshClient.executeCmd("echo 'WebUI\\CSRFProtection=false' >> /root/config/qBittorrent/qBittorrent.conf")
 	sshClient.executeCmd("echo 'WebUI\\Username=admin' >> /root/config/qBittorrent/qBittorrent.conf")
 	sshClient.executeCmd("echo 'WebUI\\Password_PBKDF2=\"@ByteArray(ARQ77eY1NUZaQsuDHbIMCA==:0WMRkYTUWVT9wVvdDtHAjU9b3b7uB8NR1Gur2hmQCvCDpm39Q+PsJRJPaCU51dEiz+dTzh8qbPsL8WkFljQYFQ==)\"' >> /root/config/qBittorrent/qBittorrent.conf")
 
@@ -134,16 +131,15 @@ func (sshClient sshClient) SetupQbittorrent(conf *config, optionsForQbitExecutab
 		-v %s:/downloads/completed \
 		-v /root/config:/config \
 		--restart unless-stopped \
-		linuxserver/qbittorrent:%s %v`,
+		linuxserver/qbittorrent:%s`,
 		conf.Qbit.IncomingDir,
 		conf.Qbit.CompletedDir,
-		conf.QbittorrentVersion, optionsForQbit)
-
+		conf.QbittorrentVersion)
 	out := sshClient.executeCmd(cmd)
 	fmt.Println("Container start output:", out)
 }
 
-func (sshClient sshClient) AddTorrents(magnetLinks []string) {
+func (sshClient sshClient) AddTorrents(magnetLinks []string, password string) {
 	fmt.Println("Waiting for qBittorrent to initialize...")
 	// Simple wait loop to ensure Web UI is up
 	for i := 0; i < 12; i++ {
@@ -155,15 +151,47 @@ func (sshClient sshClient) AddTorrents(magnetLinks []string) {
 		time.Sleep(5 * time.Second)
 	}
 
+	fmt.Println("Authenticating...")
+	// Authenticate and capture cookies
+	// qBittorrent v4.x login: POST /api/v2/auth/login with username/password
+	// Default username is admin
+	loginCmd := fmt.Sprintf("curl -i -X POST -d 'username=admin&password=%s' http://localhost:8080/api/v2/auth/login", password)
+	loginOut := sshClient.executeCmd(loginCmd)
+
+	fmt.Println("Response: %s", loginOut)
+
+	// Parse SID from headers
+	var sid string
+	// Example Header: Set-Cookie: SID=e6c4...; HttpOnly; path=/
+	lines := strings.Split(loginOut, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(strings.ToLower(line), "set-cookie:") && strings.Contains(line, "SID=") {
+			parts := strings.Split(line, "SID=")
+			if len(parts) > 1 {
+				// The value might be terminated by ;
+				val := strings.Split(parts[1], ";")[0]
+				sid = val
+				break
+			}
+		}
+	}
+
+	if sid == "" {
+		fmt.Println("Warning: Could not extract SID from login response. Adding torrents might fail if auth is enforced.")
+		// We proceed anyway, but likely to fail if auth is required
+	} else {
+		fmt.Printf("Authenticated. Session ID obtained.\n")
+	}
+
 	fmt.Println("Adding torrents...")
 	for _, link := range magnetLinks {
 		// Use curl to add torrent
 		// Endpoint: /api/v2/torrents/add
 		// Form data: urls=...
-		// Note: We enabled localhost auth bypass, so no cookies needed.
-		// escape the link for shell
+		// Need to pass cookie
 		safeLink := fmt.Sprintf("urls=%s", link)
-		cmd := fmt.Sprintf("curl -X POST -F '%s' http://localhost:8080/api/v2/torrents/add", safeLink)
+		cmd := fmt.Sprintf("curl --cookie 'SID=%s' -X POST -F '%s' http://localhost:8080/api/v2/torrents/add", sid, safeLink)
 		sshClient.executeCmd(cmd)
 	}
 	fmt.Println("Torrents added.")

@@ -17,7 +17,6 @@ download_dir: "/Downloads"
 digital_ocean_pat: "<my-digitalocean-access-token>"
 qbittorrent_version: latest
 qbittorrent_password: adminadmin
-droplet_download_dir: /mnt/data/downloads
 qbit:
   # Directory where your +qbittorrent+ is configured to keep the "in-progress" torrents.
   # Need to configure this with your qbittorrent installation.
