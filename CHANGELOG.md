@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 2.0.0 (2025-12-18)
+
+## 2.0.0 (2025-12-18)
+
 * [Feature] **Progress Tracking**: Switched to using qBittorrent API for real-time progress monitoring (speed in MB/s, ETA, and percentage).
 * [Feature] **Debug Mode**: Added `-debug` flag to enable detailed logging of SSH commands.
 * [Feature] **Docker Support**: Switched to using `docker-20-04` base image and running qBittorrent in a Docker container.
