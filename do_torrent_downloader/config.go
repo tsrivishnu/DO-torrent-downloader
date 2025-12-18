@@ -10,15 +10,19 @@ import (
 )
 
 type config struct {
-	Size              string `yaml:"size"`
-	ImageId           int    `yaml:"image_id"`
-	DropletName       string `yaml:"droplet_name"`
-	Region            string `yaml:"region"`
-	SshKey            string `yaml:"ssh_key"`
-	SshPrivateKeyPath string `yaml:"ssh_private_key_path"`
-	DownloadDir       string `yaml:"download_dir"`
-	DigitalOceanPat   string `yaml:"digital_ocean_pat"`
-	Qbit              struct {
+	Size                string `yaml:"size"`
+	ImageSlug           string `yaml:"image_slug"`
+	DropletName         string `yaml:"droplet_name"`
+	Region              string `yaml:"region"`
+	SshKey              string `yaml:"ssh_key"`
+	SshPrivateKeyPath   string `yaml:"ssh_private_key_path"`
+	DownloadDir         string `yaml:"download_dir"`
+	DigitalOceanPat     string `yaml:"digital_ocean_pat"`
+	QbittorrentVersion  string `yaml:"qbittorrent_version"`
+	QbittorrentPassword string `yaml:"qbittorrent_password"`
+	DropletDownloadDir  string `yaml:"droplet_download_dir"`
+	DropletTag          string `yaml:"droplet_tag"`
+	Qbit                struct {
 		IncomingDir  string `yaml:"incoming_dir"`
 		CompletedDir string `yaml:"completed_dir"`
 	}

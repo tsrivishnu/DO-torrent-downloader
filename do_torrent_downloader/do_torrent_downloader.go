@@ -4,11 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/digitalocean/godo"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/digitalocean/godo"
 )
 
 type arrayFlags []string
@@ -26,6 +27,8 @@ var magnetLinks arrayFlags
 var dropletIp string
 var downloadDir string
 var showVersion bool
+var cleanRemote bool
+var isDebugModeOn bool
 var droplet *godo.Droplet
 
 func setAndParseFlags() {
@@ -33,6 +36,8 @@ func setAndParseFlags() {
 	flag.StringVar(&dropletIp, "ip", "", "Public IP of an already running droplet.")
 	flag.StringVar(&downloadDir, "dir", "", "Download to directory (overrides what is set in the config file)")
 	flag.BoolVar(&showVersion, "v", false, "prints current version")
+	flag.BoolVar(&cleanRemote, "cleanRemote", false, "Delete all droplets with the configured tag")
+	flag.BoolVar(&isDebugModeOn, "debug", false, "enable debug mode")
 	flag.Parse()
 }
 
@@ -63,6 +68,12 @@ func RealMain() {
 
 	InitDoClient(config.DigitalOceanPat)
 
+	if cleanRemote {
+		fmt.Printf("Cleaning up droplets with tag: %s\n", config.DropletTag)
+		DeleteDropletsByTag(config.DropletTag)
+		return
+	}
+
 	if dropletIp == "" { // No droplet ID passed.
 		fmt.Println("Create a new droplet")
 		droplet, _ = CreateDroplet(config)
@@ -87,30 +98,100 @@ func RealMain() {
 	ip, _ := droplet.PublicIPv4()
 	fmt.Printf("Droplet IPv4 %v \n", ip)
 
-	sshClient := NewSshClient(ip, "22", "root", config.SshPrivateKeyPath)
+	sshClient := NewSshClient(ip, "22", "root", config.SshPrivateKeyPath, isDebugModeOn)
+	// delete firewall rules preventing SSH access
+	sshClient.executeCmd("sudo ufw allow ssh || true && sudo ufw reload")
+	sshClient.executeCmd("sudo ufw delete limit 22/tcp || true")
+
+	sshClient.SetupQbittorrent(config)
+
+	var sid string
+	var err error
+
+	sid, err = sshClient.GetAuthSidForQbitAPI(config.QbittorrentPassword)
+	if err != nil {
+		fmt.Printf("Error authenticating: %v\n", err)
+		return
+	}
+
 	if len(magnetLinks) > 0 {
-		resp := sshClient.executeCmd(fmt.Sprintf("qbittorrent-nox -d %v", optionsForQbit()))
-		fmt.Println(resp)
-		fmt.Printf("Torrents will be downloaded. Follow at: http://admin:adminadmin@%v:8080\n", ip)
+		sshClient.AddTorrents(magnetLinks, sid)
+		fmt.Printf("Torrents added. Monitor at: http://%v:8080\n", ip)
 	} else {
-		fmt.Println("No magnet links provided. Skip starting the torrent client.")
+		fmt.Println("No magnet links provided. Only starting the torrent client.")
 	}
 
 	downloadsInProgress := true
-	for downloadsInProgress == true {
-		incoming := sshClient.executeCmd(fmt.Sprintf("ls %s", config.Qbit.IncomingDir))
-		downloaded := sshClient.executeCmd(fmt.Sprintf("ls %s", config.Qbit.CompletedDir))
+	waitForTorrentsCounter := 0
+	const maxWaitAttempts = 12 // 1 minute (12 * 5 seconds)
 
-		if incoming == "" && downloaded != "" {
-			fmt.Println("Downloads completed")
-			// kill qbit-torrent
-			sshClient.executeCmd("pkill qbit")
+	for downloadsInProgress == true {
+		torrents, err := sshClient.GetTorrents(sid)
+		if err != nil {
+			fmt.Printf("Error getting torrents: %v\n", err)
+			time.Sleep(5 * time.Second)
+			waitForTorrentsCounter++
+			if waitForTorrentsCounter >= maxWaitAttempts {
+				fmt.Println("Timeout waiting for torrents/connection. Exiting loop.")
+				break
+			}
+			continue
+		}
+
+		if len(torrents) == 0 {
+			if len(magnetLinks) > 0 {
+				fmt.Println("No torrents found yet...")
+			} else {
+				fmt.Println("No torrents in list. Waiting...")
+			}
+			time.Sleep(5 * time.Second)
+			waitForTorrentsCounter++
+			if waitForTorrentsCounter >= maxWaitAttempts {
+				fmt.Println("Timeout waiting for torrents to appear. Exiting loop.")
+				break
+			}
+			continue
+		}
+
+		// Reset counter if we found torrents
+		waitForTorrentsCounter = 0
+
+		allCompleted := true
+		fmt.Println("--- Torrent Status ---")
+		for _, t := range torrents {
+			speedMB := float64(t.Dlspeed) / 1024 / 1024
+			etaDuration := time.Duration(t.Eta) * time.Second
+			etaString := fmt.Sprintf("%dm:%ds", int(etaDuration.Minutes()), int(etaDuration.Seconds())%60)
+			if t.Eta == 8640000 { // qBittorrent returns 8640000 for infinity/unknown
+				etaString = "∞"
+			}
+
+			fmt.Printf("[%s] %s - %.2f%% - Speed: %.2f MB/s - ETA: %s\n", t.State, t.Name, t.Progress*100, speedMB, etaString)
+
+			// Check completion
+			// States: downloading, stalledDL, metaDL, pausedDL, queuedDL, allocating, uploading, stalledUP, pausedUP, queuedUP, moving, missingFiles, error
+			// We consider it done if it's seeding, uploading, pausedUP, or progress is 1.0
+			isComplete := false
+			if t.Progress >= 1.0 {
+				isComplete = true
+			}
+			// qBittorrent states for completion usually involve "UP" (uploading) or "pausedUP" (completed and paused)
+			if strings.Contains(t.State, "UP") || t.State == "uploading" || t.State == "stalledUP" {
+				isComplete = true
+			}
+
+			if !isComplete {
+				allCompleted = false
+			}
+		}
+		fmt.Println("----------------------")
+
+		if allCompleted && len(torrents) > 0 {
+			fmt.Println("All downloads completed.")
 			downloadsInProgress = false
 		} else {
-			fmt.Println("Following downloads are in progress...")
-			fmt.Println(incoming)
+			time.Sleep(5 * time.Second)
 		}
-		time.Sleep(5 * time.Second)
 	}
 
 	// Rsync the files: https://github.com/refola/golang/blob/master/backup/rsync.go
@@ -122,12 +203,12 @@ func RealMain() {
 		"-a",
 		"--partial",
 		"--progress",
-		fmt.Sprintf("%v@%v:%v", "root", ip, config.Qbit.CompletedDir),
+		fmt.Sprintf("%v@%v:%v/", "root", ip, config.Qbit.CompletedDir),
 		config.DownloadDir)
 	// show rsync's output
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		os.Stderr.WriteString(err.Error())
 	}

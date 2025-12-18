@@ -1,8 +1,12 @@
 package doTorrentDownloader
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/digitalocean/godo"
 )
 
@@ -43,11 +47,12 @@ func CreateDroplet(config *config) (*godo.Droplet, error) {
 		Region: config.Region,
 		Size:   config.Size,
 		Image: godo.DropletCreateImage{
-			ID: config.ImageId,
+			Slug: config.ImageSlug,
 		},
 		SSHKeys: []godo.DropletCreateSSHKey{
 			{Fingerprint: FindKey(config.SshKey).Fingerprint},
 		},
+		Tags: []string{config.DropletTag},
 	}
 
 	newDroplet, _, err := DoClient.Droplets.Create(context.TODO(), createRequest)
@@ -57,6 +62,74 @@ func CreateDroplet(config *config) (*godo.Droplet, error) {
 		return nil, err
 	}
 	return newDroplet, nil
+}
+
+func DeleteDropletsByTag(tag string) {
+	if tag == "" {
+		fmt.Println("No tag specified, skipping cleanup.")
+		return
+	}
+
+	opt := &godo.ListOptions{PerPage: 200}
+	var allDroplets []godo.Droplet
+
+	// 1. Collect all droplets
+	for {
+		droplets, resp, err := DoClient.Droplets.ListByTag(context.TODO(), tag, opt)
+		if err != nil {
+			fmt.Printf("Error listing droplets by tag: %v\n", err)
+			return
+		}
+		allDroplets = append(allDroplets, droplets...)
+
+		if resp.Links == nil || resp.Links.IsLastPage() {
+			break
+		}
+		page, err := resp.Links.CurrentPage()
+		if err != nil {
+			break
+		}
+		opt.Page = page + 1
+	}
+
+	if len(allDroplets) == 0 {
+		fmt.Printf("No droplets found with tag: %s\n", tag)
+		return
+	}
+
+	// 2. Prompt for confirmation
+	fmt.Printf("Found %d droplets with tag '%s'.\n", len(allDroplets), tag)
+	for _, d := range allDroplets {
+		fmt.Printf("- %s (ID: %d, IP: %s)\n", d.Name, d.ID, func() string {
+			ip, _ := d.PublicIPv4()
+			return ip
+		}())
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print("Are you sure you want to delete them? [y/n]: ")
+		response, _ := reader.ReadString('\n')
+		response = strings.TrimSpace(strings.ToLower(response))
+
+		if response == "n" || response == "no" {
+			fmt.Println("Aborted.")
+			return
+		} else if response == "y" || response == "yes" {
+			break
+		}
+	}
+
+	// 3. Delete droplets
+	for _, d := range allDroplets {
+		fmt.Printf("Deleting droplet: %s (ID: %d)\n", d.Name, d.ID)
+		_, err := DoClient.Droplets.Delete(context.TODO(), d.ID)
+		if err != nil {
+			fmt.Printf("Error deleting droplet %d: %v\n", d.ID, err)
+		} else {
+			fmt.Println("Deleted.")
+		}
+	}
 }
 
 func GetByIp(ip string) *godo.Droplet {
