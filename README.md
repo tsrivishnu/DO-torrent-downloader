@@ -55,6 +55,12 @@ $ ./do-torrent-downloader -ip xxx.xxx.xxx.xxx
 
 #### Add a torrent to already running instance.
 
+Pass the ip and the new magnet links
+
+```bash
+$ ./do-torrent-downloader -ip xxx.xxx.xxx.xxx -m "<your-torrent-1-magnet-link" -m "<your-torrent-2-magnet-link"
+```
+
 Not supported yet. Soon will add support for this as well.
 
 # Ruby version (discontinued)
