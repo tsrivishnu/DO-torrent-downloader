@@ -32,6 +32,7 @@ type Torrent struct {
 type SshClientOp interface {
 	executeCmd(string) string
 	SetupQbittorrent(*config)
+	StopQbittorrent()
 	GetAuthSidForQbitAPI(password string) (string, error)
 	GetTorrents(sid string) ([]Torrent, error)
 	AddTorrents([]string, string)
@@ -96,6 +97,12 @@ func (sshClient sshClient) executeCmd(command string) string {
 	session.Run(command)
 
 	return stdoutBuf.String()
+}
+
+func (sshClient sshClient) StopQbittorrent() {
+	fmt.Println("Stopping and removing qbittorrent container to stop seeding...")
+	sshClient.executeCmd("docker stop qbittorrent || true && docker rm qbittorrent || true")
+	fmt.Println("qBittorrent container removed.")
 }
 
 func (sshClient sshClient) SetupQbittorrent(conf *config) {

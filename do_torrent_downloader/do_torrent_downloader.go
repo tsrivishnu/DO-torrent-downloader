@@ -245,6 +245,9 @@ func RealMain() {
 		}
 	}
 
+	// Stop seeding
+	sshClient.StopQbittorrent()
+
 	// Rsync the files: https://github.com/refola/golang/blob/master/backup/rsync.go
 	fmt.Printf("Rsync files down to %v\n", config.DownloadDir)
 	cmd := exec.Command(
