@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* [Feature] Added `-rsyncOnly` flag to skip torrent setup and proceed directly to synchronization.
+* [Enhancement] Torrent status output now updates in-place to prevent terminal scrolling.
+* [Enhancement] Added terminal width detection to truncate long torrent names and prevent line wrapping.
+* [Enhancement] Automatically stops and removes the qBittorrent container after downloads complete to prevent seeding.
 * [Feature] Pass droplet size as an argument to override the value set in config file.
 
 ## 2.0.0 (2025-12-18)

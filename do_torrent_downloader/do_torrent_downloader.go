@@ -31,6 +31,7 @@ var dropletSize string
 var showVersion bool
 var cleanRemote bool
 var isDebugModeOn bool
+var rsyncOnly bool
 var droplet *godo.Droplet
 
 func setAndParseFlags() {
@@ -41,6 +42,7 @@ func setAndParseFlags() {
 	flag.BoolVar(&showVersion, "v", false, "prints current version")
 	flag.BoolVar(&cleanRemote, "cleanRemote", false, "Delete all droplets with the configured tag")
 	flag.BoolVar(&isDebugModeOn, "debug", false, "enable debug mode")
+	flag.BoolVar(&rsyncOnly, "rsyncOnly", false, "Skip torrent client setup and simply rsync from the droplet")
 	flag.Parse()
 }
 
@@ -127,121 +129,123 @@ func RealMain() {
 	sshClient.executeCmd("sudo ufw allow ssh || true && sudo ufw reload")
 	sshClient.executeCmd("sudo ufw delete limit 22/tcp || true")
 
-	sshClient.SetupQbittorrent(config)
-
-	var sid string
 	var err error
+	if !rsyncOnly {
+		sshClient.SetupQbittorrent(config)
 
-	sid, err = sshClient.GetAuthSidForQbitAPI(config.QbittorrentPassword)
-	if err != nil {
-		fmt.Printf("Error authenticating: %v\n", err)
-		return
-	}
+		var sid string
 
-	if len(magnetLinks) > 0 {
-		sshClient.AddTorrents(magnetLinks, sid)
-		fmt.Printf("Torrents added. Monitor at: http://%v:8080\n", ip)
-	} else {
-		fmt.Println("No magnet links provided. Only starting the torrent client.")
-	}
-
-	downloadsInProgress := true
-	waitForTorrentsCounter := 0
-	const maxWaitAttempts = 12 // 1 minute (12 * 5 seconds)
-	lastLinesPrinted := 0
-
-	for downloadsInProgress == true {
-		torrents, err := sshClient.GetTorrents(sid)
+		sid, err = sshClient.GetAuthSidForQbitAPI(config.QbittorrentPassword)
 		if err != nil {
-			lastLinesPrinted = 0
-			fmt.Printf("Error getting torrents: %v\n", err)
-			time.Sleep(5 * time.Second)
-			waitForTorrentsCounter++
-			if waitForTorrentsCounter >= maxWaitAttempts {
-				fmt.Println("Timeout waiting for torrents/connection. Exiting loop.")
-				break
-			}
-			continue
+			fmt.Printf("Error authenticating: %v\n", err)
+			return
 		}
 
-		if len(torrents) == 0 {
-			lastLinesPrinted = 0
-			if len(magnetLinks) > 0 {
-				fmt.Println("No torrents found yet...")
-			} else {
-				fmt.Println("No torrents in list. Waiting...")
-			}
-			time.Sleep(5 * time.Second)
-			waitForTorrentsCounter++
-			if waitForTorrentsCounter >= maxWaitAttempts {
-				fmt.Println("Timeout waiting for torrents to appear. Exiting loop.")
-				break
-			}
-			continue
-		}
-
-		// Reset counter if we found torrents
-		waitForTorrentsCounter = 0
-
-		allCompleted := true
-
-		if lastLinesPrinted > 0 {
-			fmt.Printf("\033[%dA", lastLinesPrinted)
-		}
-		fmt.Print("\033[2K\r--- Torrent Status ---\n")
-		termWidth := getTerminalWidth()
-		for _, t := range torrents {
-			speedMB := float64(t.Dlspeed) / 1024 / 1024
-			etaDuration := time.Duration(t.Eta) * time.Second
-			etaString := fmt.Sprintf("%dm:%ds", int(etaDuration.Minutes()), int(etaDuration.Seconds())%60)
-			if t.Eta == 8640000 { // qBittorrent returns 8640000 for infinity/unknown
-				etaString = "∞"
-			}
-
-			// fmt.Printf("\033[2K\r[%s] %s - %.2f%% - Speed: %.2f MB/s - ETA: %s\n", t.State, t.Name, t.Progress*100, speedMB, etaString)
-			// Construct parts to calculate length
-			prefix := fmt.Sprintf("[%s] ", t.State)
-			suffix := fmt.Sprintf(" - %.2f%% - Speed: %.2f MB/s - ETA: %s", t.Progress*100, speedMB, etaString)
-			
-			availableSpace := termWidth - len(prefix) - len(suffix)
-			name := t.Name
-			if availableSpace < 5 { // Minimal space fallback
-				// Just print as is or very short, but let's assume at least some space. 
-				// If strictly enforcing no wrap, we might hide name.
-				if len(name) > 10 {
-					name = name[:7] + "..."
-				}
-			} else if len(name) > availableSpace {
-				name = name[:availableSpace-3] + "..."
-			}
-
-			fmt.Printf("\033[2K\r%s%s%s\n", prefix, name, suffix)
-
-
-			// Check completion
-			// States: downloading, stalledDL, metaDL, pausedDL, queuedDL, allocating, uploading, stalledUP, pausedUP, queuedUP, moving, missingFiles, error
-			// We consider it done if it's seeding, uploading, pausedUP, or progress is 1.0
-			isComplete := false
-			if t.Progress >= 1.0 {
-				isComplete = true
-			}
-			// qBittorrent states for completion usually involve "UP" (uploading) or "pausedUP" (completed and paused)
-			if strings.Contains(t.State, "UP") || t.State == "uploading" || t.State == "stalledUP" {
-				isComplete = true
-			}
-
-			if !isComplete {
-				allCompleted = false
-			}
-		}
-		fmt.Print("\033[2K\r----------------------\n")
-		lastLinesPrinted = len(torrents) + 2
-
-		if allCompleted && len(torrents) > 0 {
-			fmt.Println("All downloads completed.")
-			downloadsInProgress = false
+		if len(magnetLinks) > 0 {
+			sshClient.AddTorrents(magnetLinks, sid)
+			fmt.Printf("Torrents added. Monitor at: http://%v:8080\n", ip)
 		} else {
-			time.Sleep(5 * time.Second)
+			fmt.Println("No magnet links provided. Only starting the torrent client.")
+		}
+
+		downloadsInProgress := true
+		waitForTorrentsCounter := 0
+		const maxWaitAttempts = 12 // 1 minute (12 * 5 seconds)
+		lastLinesPrinted := 0
+
+		for downloadsInProgress == true {
+			torrents, err := sshClient.GetTorrents(sid)
+			if err != nil {
+				lastLinesPrinted = 0
+				fmt.Printf("Error getting torrents: %v\n", err)
+				time.Sleep(5 * time.Second)
+				waitForTorrentsCounter++
+				if waitForTorrentsCounter >= maxWaitAttempts {
+					fmt.Println("Timeout waiting for torrents/connection. Exiting loop.")
+					break
+				}
+				continue
+			}
+
+			if len(torrents) == 0 {
+				lastLinesPrinted = 0
+				if len(magnetLinks) > 0 {
+					fmt.Println("No torrents found yet...")
+				} else {
+					fmt.Println("No torrents in list. Waiting...")
+				}
+				time.Sleep(5 * time.Second)
+				waitForTorrentsCounter++
+				if waitForTorrentsCounter >= maxWaitAttempts {
+					fmt.Println("Timeout waiting for torrents to appear. Exiting loop.")
+					break
+				}
+				continue
+			}
+
+			// Reset counter if we found torrents
+			waitForTorrentsCounter = 0
+
+			allCompleted := true
+
+			if lastLinesPrinted > 0 {
+				fmt.Printf("\033[%dA", lastLinesPrinted)
+			}
+			fmt.Print("\033[2K\r--- Torrent Status ---\n")
+			termWidth := getTerminalWidth()
+			for _, t := range torrents {
+				speedMB := float64(t.Dlspeed) / 1024 / 1024
+				etaDuration := time.Duration(t.Eta) * time.Second
+				etaString := fmt.Sprintf("%dm:%ds", int(etaDuration.Minutes()), int(etaDuration.Seconds())%60)
+				if t.Eta == 8640000 { // qBittorrent returns 8640000 for infinity/unknown
+					etaString = "∞"
+				}
+
+				// fmt.Printf("\033[2K\r[%s] %s - %.2f%% - Speed: %.2f MB/s - ETA: %s\n", t.State, t.Name, t.Progress*100, speedMB, etaString)
+				// Construct parts to calculate length
+				prefix := fmt.Sprintf("[%s] ", t.State)
+				suffix := fmt.Sprintf(" - %.2f%% - Speed: %.2f MB/s - ETA: %s", t.Progress*100, speedMB, etaString)
+				
+				availableSpace := termWidth - len(prefix) - len(suffix)
+				name := t.Name
+				if availableSpace < 5 { // Minimal space fallback
+					// Just print as is or very short, but let's assume at least some space. 
+					// If strictly enforcing no wrap, we might hide name.
+					if len(name) > 10 {
+						name = name[:7] + "..."
+					}
+				} else if len(name) > availableSpace {
+					name = name[:availableSpace-3] + "..."
+				}
+
+				fmt.Printf("\033[2K\r%s%s%s\n", prefix, name, suffix)
+
+
+				// Check completion
+				// States: downloading, stalledDL, metaDL, pausedDL, queuedDL, allocating, uploading, stalledUP, pausedUP, queuedUP, moving, missingFiles, error
+				// We consider it done if it's seeding, uploading, pausedUP, or progress is 1.0
+				isComplete := false
+				if t.Progress >= 1.0 {
+					isComplete = true
+				}
+				// qBittorrent states for completion usually involve "UP" (uploading) or "pausedUP" (completed and paused)
+				if strings.Contains(t.State, "UP") || t.State == "uploading" || t.State == "stalledUP" {
+					isComplete = true
+				}
+
+				if !isComplete {
+					allCompleted = false
+				}
+			}
+			fmt.Print("\033[2K\r----------------------\n")
+			lastLinesPrinted = len(torrents) + 2
+
+			if allCompleted && len(torrents) > 0 {
+				fmt.Println("All downloads completed.")
+				downloadsInProgress = false
+			} else {
+				time.Sleep(5 * time.Second)
+			}
 		}
 	}
 
