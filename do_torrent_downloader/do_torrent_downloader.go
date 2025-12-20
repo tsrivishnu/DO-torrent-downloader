@@ -26,6 +26,7 @@ func (i *arrayFlags) Set(value string) error {
 var magnetLinks arrayFlags
 var dropletIp string
 var downloadDir string
+var dropletSize string
 var showVersion bool
 var cleanRemote bool
 var isDebugModeOn bool
@@ -35,6 +36,7 @@ func setAndParseFlags() {
 	flag.Var(&magnetLinks, "m", "Torrent magnet link.")
 	flag.StringVar(&dropletIp, "ip", "", "Public IP of an already running droplet.")
 	flag.StringVar(&downloadDir, "dir", "", "Download to directory (overrides what is set in the config file)")
+	flag.StringVar(&dropletSize, "size", "", "Size slug of the droplet (overrides what is set in the config file)")
 	flag.BoolVar(&showVersion, "v", false, "prints current version")
 	flag.BoolVar(&cleanRemote, "cleanRemote", false, "Delete all droplets with the configured tag")
 	flag.BoolVar(&isDebugModeOn, "debug", false, "enable debug mode")
@@ -60,6 +62,10 @@ func RealMain() {
 	if downloadDir != "" {
 		// Override with argument
 		config.DownloadDir = downloadDir
+	}
+	if dropletSize != "" {
+		// Override with argument
+		config.Size = dropletSize
 	}
 
 	fmt.Println("\nRunning with the following config:")

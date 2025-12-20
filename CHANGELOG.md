@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* [Feature] Pass droplet size as an argument to override the value set in config file.
+
 ## 2.0.0 (2025-12-18)
 
 * [Feature] **Progress Tracking**: Switched to using qBittorrent API for real-time progress monitoring (speed in MB/s, ETA, and percentage).
