@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -41,6 +42,23 @@ func setAndParseFlags() {
 	flag.BoolVar(&cleanRemote, "cleanRemote", false, "Delete all droplets with the configured tag")
 	flag.BoolVar(&isDebugModeOn, "debug", false, "enable debug mode")
 	flag.Parse()
+}
+
+func getTerminalWidth() int {
+	cmd := exec.Command("stty", "size")
+	cmd.Stdin = os.Stdin
+	out, err := cmd.Output()
+	if err != nil {
+		return 80 // default
+	}
+	parts := strings.Fields(string(out))
+	if len(parts) >= 2 {
+		width, err := strconv.Atoi(parts[1])
+		if err == nil {
+			return width
+		}
+	}
+	return 80
 }
 
 func optionsForQbit() string {
@@ -130,10 +148,12 @@ func RealMain() {
 	downloadsInProgress := true
 	waitForTorrentsCounter := 0
 	const maxWaitAttempts = 12 // 1 minute (12 * 5 seconds)
+	lastLinesPrinted := 0
 
 	for downloadsInProgress == true {
 		torrents, err := sshClient.GetTorrents(sid)
 		if err != nil {
+			lastLinesPrinted = 0
 			fmt.Printf("Error getting torrents: %v\n", err)
 			time.Sleep(5 * time.Second)
 			waitForTorrentsCounter++
@@ -145,6 +165,7 @@ func RealMain() {
 		}
 
 		if len(torrents) == 0 {
+			lastLinesPrinted = 0
 			if len(magnetLinks) > 0 {
 				fmt.Println("No torrents found yet...")
 			} else {
@@ -163,7 +184,12 @@ func RealMain() {
 		waitForTorrentsCounter = 0
 
 		allCompleted := true
-		fmt.Println("--- Torrent Status ---")
+
+		if lastLinesPrinted > 0 {
+			fmt.Printf("\033[%dA", lastLinesPrinted)
+		}
+		fmt.Print("\033[2K\r--- Torrent Status ---\n")
+		termWidth := getTerminalWidth()
 		for _, t := range torrents {
 			speedMB := float64(t.Dlspeed) / 1024 / 1024
 			etaDuration := time.Duration(t.Eta) * time.Second
@@ -172,7 +198,25 @@ func RealMain() {
 				etaString = "∞"
 			}
 
-			fmt.Printf("[%s] %s - %.2f%% - Speed: %.2f MB/s - ETA: %s\n", t.State, t.Name, t.Progress*100, speedMB, etaString)
+			// fmt.Printf("\033[2K\r[%s] %s - %.2f%% - Speed: %.2f MB/s - ETA: %s\n", t.State, t.Name, t.Progress*100, speedMB, etaString)
+			// Construct parts to calculate length
+			prefix := fmt.Sprintf("[%s] ", t.State)
+			suffix := fmt.Sprintf(" - %.2f%% - Speed: %.2f MB/s - ETA: %s", t.Progress*100, speedMB, etaString)
+			
+			availableSpace := termWidth - len(prefix) - len(suffix)
+			name := t.Name
+			if availableSpace < 5 { // Minimal space fallback
+				// Just print as is or very short, but let's assume at least some space. 
+				// If strictly enforcing no wrap, we might hide name.
+				if len(name) > 10 {
+					name = name[:7] + "..."
+				}
+			} else if len(name) > availableSpace {
+				name = name[:availableSpace-3] + "..."
+			}
+
+			fmt.Printf("\033[2K\r%s%s%s\n", prefix, name, suffix)
+
 
 			// Check completion
 			// States: downloading, stalledDL, metaDL, pausedDL, queuedDL, allocating, uploading, stalledUP, pausedUP, queuedUP, moving, missingFiles, error
@@ -190,7 +234,8 @@ func RealMain() {
 				allCompleted = false
 			}
 		}
-		fmt.Println("----------------------")
+		fmt.Print("\033[2K\r----------------------\n")
+		lastLinesPrinted = len(torrents) + 2
 
 		if allCompleted && len(torrents) > 0 {
 			fmt.Println("All downloads completed.")
