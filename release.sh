@@ -31,7 +31,7 @@ echo "Update contributors..."
 git contributors | awk '{for (i=2; i<NF; i++) printf $i " "; print $NF}' > CONTRIBUTORS
 
 echo "Build binaries..."
-docker-compose run app make build
+make build
 
 echo "Update repository..."
 git add do_torrent_downloader/version.go download.sh README.md CHANGELOG.md
