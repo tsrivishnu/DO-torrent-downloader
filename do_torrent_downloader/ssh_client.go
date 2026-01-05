@@ -127,6 +127,11 @@ Session\TempPath=/downloads/incoming
 Session\DefaultSavePath=/downloads/completed
 Session\TempPathEnabled=true
 [Preferences]
+# Disable OS Cache to prevent Linux write-buffer corruption (Libtorrent 2.0 bug)
+Advanced\DiskIOReadMode=DisableOSCache
+Advanced\DiskIOWriteMode=DisableOSCache
+# This ensures that EVERY finished file is verified against the hash before finishing
+Advanced\RecheckOnCompletion=true
 WebUI\Username=admin
 WebUI\Password_PBKDF2="%s"`, pwdHash)
 
